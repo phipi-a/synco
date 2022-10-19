@@ -1,0 +1,6 @@
+{
+    "username":"username",
+    "password":"password",
+    "hostname":"https://tubcloud.tu-berlin.de:443/remote.php/webdav",
+    "cloud_root_path":"/own_sync/"
+}
