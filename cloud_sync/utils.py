@@ -45,10 +45,16 @@ def conf_file_to_tree(last_tree, path="file.conf",ignore_file_path="ignore.conf"
     tree=RootNode(last_sync=last_tree_sync)
     with open(path, "r") as f:
         for line in f:
+            if line.startswith("#"):
+                continue
+            if line.strip() == "":
+                continue
             p=os.path.abspath(line.strip().replace("~", os.path.expanduser("~")))
+            if not is_not_ignored(p,ignore_file_path):
+                continue
             if os.path.isdir(p):
-                for file in get_all_absolut_file_paths(p):
-                    if is_not_ignored(file,ignore_file_path):
+                for file in get_all_absolut_file_paths(p) :
+                    if is_not_ignored(file,ignore_file_path) and os.path.exists(file):
                         mtime = os.path.getmtime(file)
                         tree.add_file_to_node(file, last_sync=get_last_sysnc_by_path(file, last_tree), mtime=euro_to_utc(mtime))
             else:

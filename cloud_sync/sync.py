@@ -143,6 +143,7 @@ try:
                 conflict_paths += dir_dict["conflict"]
         return {"upload": upload_paths, "download": download_paths, "delete_local": delete_local_paths, "conflict": conflict_paths}
 
+    # get actions based on cloud_tree
     def find_modified_cloud_files(path):
         root=cloud_tree.get_node_by_path(path)
         z=root.children
