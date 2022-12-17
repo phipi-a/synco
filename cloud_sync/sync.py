@@ -64,11 +64,15 @@ if not os.path.exists(os.path.dirname(local_tree_path)):
 conflict_lines=read_file_lines(conflict_file_path)[1:] if os.path.exists(conflict_file_path) else []
 conflict_keep_local=[]
 conflict_keep_cloud=[]
+conflict_do_nothing=[]
 for line in conflict_lines:
     if line.startswith("l "):
         conflict_keep_local.append(line[2:])
     elif line.startswith("c "):
         conflict_keep_cloud.append(line[2:])
+    elif line.startswith("- "):
+        conflict_do_nothing.append(line[2:])
+
 
 
 
@@ -93,6 +97,7 @@ try:
         download_paths=[]
         delete_local_paths=[]
         conflict_paths=[]
+        nothing_paths=[]
         state=None
         cloud_node=cloud_tree.get_node_by_path(node.path)
         
@@ -111,6 +116,9 @@ try:
                         elif node.path in conflict_keep_cloud:
                             state="download"
                             download_paths.append(node.path)
+                        elif node.path in conflict_do_nothing:
+                            state = "nothing"
+                            nothing_paths.append(node.path)
                         else:
                             conflict_paths.append(node.path)
                 else:
@@ -141,7 +149,8 @@ try:
                 download_paths += dir_dict["download"]
                 delete_local_paths += dir_dict["delete_local"]
                 conflict_paths += dir_dict["conflict"]
-        return {"upload": upload_paths, "download": download_paths, "delete_local": delete_local_paths, "conflict": conflict_paths}
+                nothing_paths += dir_dict["nothing"]
+        return {"upload": upload_paths, "download": download_paths, "delete_local": delete_local_paths, "conflict": conflict_paths, "nothing": nothing_paths}
 
     # get actions based on cloud_tree
     def find_modified_cloud_files(path):
@@ -167,7 +176,7 @@ try:
         return {"download": download_paths, "delete_cloud": delete_cloud_paths}
     l_actions=update_state_of_local_tree(local_tree)
     c_actions=find_modified_cloud_files("/")
-    actions={"upload": l_actions["upload"], "download": l_actions["download"]+c_actions["download"], "delete_local": l_actions["delete_local"], "delete_cloud":c_actions["delete_cloud"], "conflict": l_actions["conflict"]}
+    actions={"upload": l_actions["upload"], "download": l_actions["download"]+c_actions["download"], "delete_local": l_actions["delete_local"], "delete_cloud":c_actions["delete_cloud"], "conflict": l_actions["conflict"], "nothing": l_actions["nothing"]}
     pattern_list=read_file_lines(ignore_file_path)
     for pattern in pattern_list:
         if pattern == "":
@@ -221,10 +230,15 @@ try:
         for file in tqdm(actions["delete_local"]):
             os.remove(file)
             local_tree.get_node_by_path(file).set_last_sync(euro_to_utc(time.time()+time_shift_delta))
+    if len(actions["nothing"]) > 0:
+        print("nothing to do...")
+        for file in tqdm(actions["nothing"]):
+            local_tree.get_node_by_path(file).set_last_sync(euro_to_utc(time.time()+time_shift_delta))
+
     print("done")
     for file in actions["conflict"]:
         print("conflict: " + file)
-    write_lines(conflict_file_path, ["--- [c] for keep cloud version [l] for keep local version"]+actions["conflict"])
+    write_lines(conflict_file_path, ["--- [c] for keep cloud version [l] for keep local version [-] for do nothing ---"]+actions["conflict"])
     if len(actions["conflict"]) > 0:
         print("conflicts found, please resolve them in the conflict file: "+conflict_file_path)
         print("or run synco with the --resolve flag")
